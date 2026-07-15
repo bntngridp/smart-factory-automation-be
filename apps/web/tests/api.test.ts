@@ -3,17 +3,51 @@ import assert from 'node:assert/strict'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000'
 
+let sessionCookie: string | null = null
+
 async function api(path: string, options?: RequestInit) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  }
+
+  if (sessionCookie) {
+    headers['Cookie'] = sessionCookie
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers,
   })
-  const body = await res.json()
+
+  if (path === '/api/auth/login' && res.status === 200) {
+    const setCookie = res.headers.get('set-cookie')
+    if (setCookie) {
+      sessionCookie = setCookie.split(';')[0]
+    }
+  }
+
+  // Jika response tidak memiliki body (misal logout), jangan parse JSON
+  let body: any = null
+  try {
+    body = await res.json()
+  } catch {}
+
   return { status: res.status, body }
 }
+
+before(async () => {
+  // Login secara otomatis sebelum testing route lain dimulai
+  const { status, body } = await api('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: 'admin',
+      password: 'admin123',
+    }),
+  })
+  assert.equal(status, 200)
+  assert.ok(body.success)
+})
 
 describe('GET /api/products', () => {
   it('should return 200 with array of products', async () => {
@@ -235,3 +269,31 @@ describe('POST /api/inventory/movements (OUT)', () => {
     assert.equal(status, 404)
   })
 })
+
+describe('Authentication API', () => {
+  it('should get current user info with valid session', async () => {
+    const { status, body } = await api('/api/auth/me')
+    assert.equal(status, 200)
+    assert.ok(body.user)
+    assert.equal(body.user.Username, 'admin')
+    assert.equal(body.user.Role, 'admin')
+  })
+
+  it('should return 401 when accessing me without session', async () => {
+    const originalCookie = sessionCookie
+    sessionCookie = null
+    const { status } = await api('/api/auth/me')
+    sessionCookie = originalCookie
+    assert.equal(status, 401)
+  })
+
+  it('should return 401 for invalid login credentials', async () => {
+    const { status, body } = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'wrongpassword' }),
+    })
+    assert.equal(status, 401)
+    assert.ok(body.error)
+  })
+})
+

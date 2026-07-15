@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: '📊' },
@@ -11,6 +12,38 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<{ Username: string; Role: string } | null>(null)
+
+  useEffect(() => {
+    if (pathname === '/login') return
+
+    fetch('/api/auth/me')
+      .then((res) => {
+        if (res.ok) return res.json()
+        throw new Error('Unauthorized')
+      })
+      .then((data) => {
+        setUser(data.user)
+      })
+      .catch(() => {
+        setUser(null)
+      })
+  }, [pathname])
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' })
+      if (res.ok) {
+        router.push('/login')
+        router.refresh()
+      }
+    } catch (err) {
+      console.error('Logout gagal:', err)
+    }
+  }
+
+  if (pathname === '/login') return null
 
   return (
     <aside className="w-60 bg-slate-900 text-slate-100 flex flex-col">
@@ -47,8 +80,30 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-6 py-4 border-t border-slate-800 text-xs text-slate-500">
-        v0.1.0
+      {user && (
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-semibold text-blue-400">
+              {user.Username.substring(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-200 truncate">{user.Username}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{user.Role}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 active:scale-[0.98] border border-red-500/20 text-xs font-semibold text-red-400 rounded-md transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>🚪</span>
+            <span>Logout</span>
+          </button>
+        </div>
+      )}
+
+      <div className="px-6 py-4 border-t border-slate-800 text-[10px] text-slate-500 flex justify-between">
+        <span>v0.1.0</span>
+        <span>Dubu Engine 🦅</span>
       </div>
     </aside>
   )

@@ -32,3 +32,11 @@ model Products {
   InventoryMovements InventoryMovements[]
   ProductionLogs     ProductionLogs[]
 }
+
+model Users {
+  UserID   Int    @id @default(autoincrement())
+  Username String @unique @db.VarChar(50)
+  Password String @db.VarChar(255)
+  Role     String @default("admin") @db.VarChar(20)
+}
+

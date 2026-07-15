@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { PrismaMssql } from '@prisma/adapter-mssql'
+import bcrypt from 'bcryptjs'
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
@@ -17,6 +18,24 @@ async function main() {
   await prisma.inventoryMovements.deleteMany()
   await prisma.productionLogs.deleteMany()
   await prisma.products.deleteMany()
+  try {
+    // @ts-ignore
+    await prisma.users.deleteMany()
+  } catch (err) {
+    console.log('Users table might not exist yet during initial clean, skipping deleteMany')
+  }
+
+  // Seed user admin
+  const hashedPassword = await bcrypt.hash('admin123', 10)
+  // @ts-ignore
+  await prisma.users.create({
+    data: {
+      Username: 'admin',
+      Password: hashedPassword,
+      Role: 'admin',
+    },
+  })
+  console.log('✅ User admin berhasil dibuat')
 
   const productsData = [
     { ProductName: 'Baut Industri M8', Unit: 'pcs', MinStock: 500 },
