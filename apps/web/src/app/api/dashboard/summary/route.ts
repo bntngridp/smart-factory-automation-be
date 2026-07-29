@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'http://localhost:6061',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  })
+}
+
 type Movement = { MovementType: string | null; Quantity: number }
 
 type ProductWithMovements = {
@@ -61,10 +75,10 @@ export async function GET() {
         total_production_today: todayAgg._sum.Quantity ?? 0,
         low_stock_alerts: lowStockAlerts,
       },
-      { status: 200 },
+      { status: 200, headers: corsHeaders },
     )
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Terjadi kesalahan'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders })
   }
 }
