@@ -5,8 +5,14 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json()
-    const user = await loginUser(username, password)
+    const body = await request.json()
+    // Accept either username or email field
+    let inputUser = body.username || body.email || ''
+    if (inputUser.includes('@')) {
+      inputUser = inputUser.split('@')[0]
+    }
+
+    const user = await loginUser(inputUser, body.password)
     
     const token = await signToken(user)
     const cookieStore = await cookies()
@@ -18,7 +24,7 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24, // 1 day
     })
 
-    return NextResponse.json({ success: true, user })
+    return NextResponse.json({ success: true, token, user })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Terjadi kesalahan'
     return NextResponse.json({ error: message }, { status: 401 })

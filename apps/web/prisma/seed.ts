@@ -25,17 +25,22 @@ async function main() {
     console.log('Users table might not exist yet during initial clean, skipping deleteMany')
   }
 
-  // Seed user admin
-  const hashedPassword = await bcrypt.hash('admin123', 10)
-  // @ts-ignore
-  await prisma.users.create({
-    data: {
-      Username: 'admin',
-      Password: hashedPassword,
-      Role: 'admin',
-    },
-  })
-  console.log('✅ User admin berhasil dibuat')
+  // Seed user admin & adminsatu s/d admintiga
+  const defaultPassword = await bcrypt.hash('password123', 10)
+  const legacyPassword = await bcrypt.hash('admin123', 10)
+
+  const adminUsersData = [
+    { Username: 'admin', Password: legacyPassword, Role: 'admin' },
+    { Username: 'adminsatu', Password: defaultPassword, Role: 'admin' },
+    { Username: 'admindua', Password: defaultPassword, Role: 'admin' },
+    { Username: 'admintiga', Password: defaultPassword, Role: 'admin' },
+  ]
+
+  for (const u of adminUsersData) {
+    // @ts-ignore
+    await prisma.users.create({ data: u })
+  }
+  console.log('✅ User adminsatu, admindua, admintiga & admin berhasil dibuat!')
 
   const productsData = [
     { ProductName: 'Baut Industri M8', Unit: 'pcs', MinStock: 500 },
