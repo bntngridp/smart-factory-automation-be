@@ -1,30 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-const SECRET_KEY = process.env.JWT_SECRET || 'dubu-secret-eagle-eye-key-shh'
-const key = new TextEncoder().encode(SECRET_KEY)
+export function middleware(request: NextRequest) {
+  const origin = request.headers.get('origin') || 'http://localhost:6061'
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // Hanya proteksi route API selain endpoints auth (/api/auth/*)
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
-    const token = request.cookies.get('session')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    try {
-      await jwtVerify(token, key)
-    } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // Handle preflight OPTIONS requests
+  if (request.method === 'OPTIONS') {
+    const response = new NextResponse(null, { status: 200 })
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    response.headers.set('Access-Control-Allow-Credentials', 'true')
+    return response
   }
 
-  return NextResponse.next()
+  const response = NextResponse.next()
+  response.headers.set('Access-Control-Allow-Origin', origin)
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  return response
 }
 
 export const config = {
-  // Hanya jalankan middleware untuk route API (/api/*)
-  matcher: ['/api/:path*'],
+  matcher: '/api/:path*',
 }

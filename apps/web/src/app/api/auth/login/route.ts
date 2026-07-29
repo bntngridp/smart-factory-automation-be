@@ -3,6 +3,17 @@ import { loginUser } from '@/services/authService'
 import { signToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'http://localhost:6061',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -24,9 +35,15 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24, // 1 day
     })
 
-    return NextResponse.json({ success: true, token, user })
+    return NextResponse.json(
+      { success: true, token, user },
+      { headers: corsHeaders }
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Terjadi kesalahan'
-    return NextResponse.json({ error: message }, { status: 401 })
+    return NextResponse.json(
+      { error: message },
+      { status: 401, headers: corsHeaders }
+    )
   }
 }
