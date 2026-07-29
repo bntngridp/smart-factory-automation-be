@@ -74,3 +74,21 @@ export async function updateProduct(id: number, data: UpdateProductInput) {
   revalidatePath('/')
   return product
 }
+
+export async function deleteProduct(id: number) {
+  const existing = await prisma.products.findUnique({
+    where: { ProductID: id },
+  })
+
+  if (!existing) {
+    throw new Error(`Produk dengan ID ${id} tidak ditemukan`)
+  }
+
+  await prisma.products.delete({
+    where: { ProductID: id },
+  })
+
+  revalidatePath('/products')
+  revalidatePath('/')
+  return { success: true, message: `Produk ID ${id} berhasil dihapus` }
+}
