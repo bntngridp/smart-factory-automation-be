@@ -28,6 +28,7 @@ async function api(path: string, options?: RequestInit) {
   }
 
   // Jika response tidak memiliki body (misal logout), jangan parse JSON
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: any = null
   try {
     body = await res.json()
