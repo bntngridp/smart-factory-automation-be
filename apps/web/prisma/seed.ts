@@ -19,7 +19,6 @@ async function main() {
   await prisma.productionLogs.deleteMany()
   await prisma.products.deleteMany()
   try {
-    // @ts-expect-error users model might not be generated in all environments
     await prisma.users.deleteMany()
   } catch {
     console.log('Users table might not exist yet during initial clean, skipping deleteMany')
@@ -37,7 +36,6 @@ async function main() {
   ]
 
   for (const u of adminUsersData) {
-    // @ts-expect-error users model might not be generated in all environments
     await prisma.users.create({ data: u })
   }
   console.log('✅ User adminsatu, admindua, admintiga & admin berhasil dibuat!')
