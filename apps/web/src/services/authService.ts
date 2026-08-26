@@ -27,6 +27,7 @@ export async function loginUser(Username?: string, Password?: string) {
     UserID: user.UserID,
     Username: user.Username,
     Role: user.Role,
+    TwoFactorEnabled: user.TwoFactorEnabled,
   }
 }
 

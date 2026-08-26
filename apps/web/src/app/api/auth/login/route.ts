@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loginUser } from '@/services/authService'
 import { signToken } from '@/lib/auth'
+import { signTemp2FAToken } from '@/services/twoFactorService'
 import { cookies } from 'next/headers'
 
 const corsHeaders = {
@@ -24,7 +25,25 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await loginUser(inputUser, body.password)
-    
+
+    // If Two-Factor Authentication is enabled, trigger 2FA challenge
+    if (user.TwoFactorEnabled) {
+      const tempToken = await signTemp2FAToken(user)
+      return NextResponse.json(
+        {
+          requires2FA: true,
+          tempToken,
+          user: {
+            UserID: user.UserID,
+            Username: user.Username,
+            Role: user.Role,
+          },
+          message: 'Autentikasi Dua Faktor diperlukan. Masukkan kode 6-digit dari aplikasi authenticator Anda.',
+        },
+        { headers: corsHeaders }
+      )
+    }
+
     const token = await signToken(user)
     const cookieStore = await cookies()
     cookieStore.set('session', token, {

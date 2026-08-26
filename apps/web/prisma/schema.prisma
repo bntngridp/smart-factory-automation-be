@@ -34,9 +34,12 @@ model Products {
 }
 
 model Users {
-  UserID   Int    @id @default(autoincrement())
-  Username String @unique @db.VarChar(50)
-  Password String @db.VarChar(255)
-  Role     String @default("admin") @db.VarChar(20)
+  UserID            Int      @id @default(autoincrement())
+  Username          String   @unique @db.VarChar(50)
+  Password          String   @db.VarChar(255)
+  Role              String   @default("admin") @db.VarChar(20)
+  TwoFactorEnabled  Boolean  @default(false)
+  TwoFactorSecret   String?  @db.VarChar(100)
+  TwoFactorRecovery String?  @db.VarChar(500)
 }
 
