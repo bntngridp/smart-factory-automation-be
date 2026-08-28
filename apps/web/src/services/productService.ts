@@ -1,6 +1,11 @@
-import 'server-only'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db'
+
+function safeRevalidate(path: string) {
+  try {
+    revalidatePath(path)
+  } catch {}
+}
 
 export type CreateProductInput = {
   ProductName: string
@@ -22,17 +27,21 @@ export async function getProducts(search?: string) {
 }
 
 export async function getProductById(id: number) {
-  return prisma.products.findUnique({
+  const product = await prisma.products.findUnique({
     where: { ProductID: id },
   })
+  if (!product) {
+    throw new Error(`Produk dengan ID ${id} tidak ditemukan`)
+  }
+  return product
 }
 
 export async function createProduct(data: CreateProductInput) {
   if (!data.ProductName || data.ProductName.trim() === '') {
-    throw new Error('Nama produk tidak boleh kosong')
+    throw new Error('Nama produk wajib diisi')
   }
   if (data.MinStock != null && data.MinStock < 0) {
-    throw new Error('Stok minimal tidak boleh negatif')
+    throw new Error('Batas stok minimum tidak boleh bernilai negatif')
   }
 
   const product = await prisma.products.create({
@@ -43,8 +52,8 @@ export async function createProduct(data: CreateProductInput) {
     },
   })
 
-  revalidatePath('/products')
-  revalidatePath('/')
+  safeRevalidate('/products')
+  safeRevalidate('/')
   return product
 }
 
@@ -58,7 +67,7 @@ export async function updateProduct(id: number, data: UpdateProductInput) {
   }
 
   if (data.MinStock != null && data.MinStock < 0) {
-    throw new Error('Stok minimal tidak boleh negatif')
+    throw new Error('Batas stok minimum tidak boleh bernilai negatif')
   }
 
   const product = await prisma.products.update({
@@ -70,8 +79,8 @@ export async function updateProduct(id: number, data: UpdateProductInput) {
     },
   })
 
-  revalidatePath('/products')
-  revalidatePath('/')
+  safeRevalidate('/products')
+  safeRevalidate('/')
   return product
 }
 
@@ -88,7 +97,7 @@ export async function deleteProduct(id: number) {
     where: { ProductID: id },
   })
 
-  revalidatePath('/products')
-  revalidatePath('/')
+  safeRevalidate('/products')
+  safeRevalidate('/')
   return { success: true, message: `Produk ID ${id} berhasil dihapus` }
 }

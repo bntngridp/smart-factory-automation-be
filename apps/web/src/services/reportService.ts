@@ -1,4 +1,3 @@
-import 'server-only'
 import { prisma } from '@/lib/db'
 
 export async function getReportsAnalytics(days: number = 30) {

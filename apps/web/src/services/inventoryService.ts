@@ -1,6 +1,11 @@
-import 'server-only'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db'
+
+function safeRevalidate(path: string) {
+  try {
+    revalidatePath(path)
+  } catch {}
+}
 
 export type CreateMovementOutInput = {
   ProductID: number
@@ -8,6 +13,14 @@ export type CreateMovementOutInput = {
 }
 
 type Movement = { MovementType: string | null; Quantity: number }
+
+export async function getInventoryMovements(type?: string) {
+  return prisma.inventoryMovements.findMany({
+    where: type ? { MovementType: type } : undefined,
+    orderBy: { MovementDate: 'desc' },
+    include: { Products: { select: { ProductName: true, Unit: true } } },
+  })
+}
 
 export async function getCurrentStock(productId: number): Promise<number> {
   const movements = await prisma.inventoryMovements.findMany({
@@ -28,7 +41,13 @@ export async function getCurrentStock(productId: number): Promise<number> {
   return totalIn - totalOut
 }
 
+export const calculateProductStock = getCurrentStock
+
 export async function createMovementOut(data: CreateMovementOutInput) {
+  if (!data.Quantity || data.Quantity <= 0) {
+    throw new Error('Jumlah stok keluar harus lebih besar dari 0')
+  }
+
   const product = await prisma.products.findUnique({
     where: { ProductID: data.ProductID },
   })
@@ -52,7 +71,11 @@ export async function createMovementOut(data: CreateMovementOutInput) {
     },
   })
 
-  revalidatePath('/inventory/movements')
-  revalidatePath('/')
+  safeRevalidate('/inventory/movements')
+  safeRevalidate('/')
   return movement
+}
+
+export async function createStockOutMovement(productId: number, quantity: number) {
+  return createMovementOut({ ProductID: productId, Quantity: quantity })
 }

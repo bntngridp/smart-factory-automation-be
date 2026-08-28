@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start -p 6060",
     "lint": "eslint",
-    "test:api": "tsx --test tests/api.test.ts"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "tsx --test tests/unit/*/*.spec.ts",
+    "test:integration": "tsx --test --test-concurrency=1 tests/integration/*/*.spec.ts"
   },
   "dependencies": {
     "@prisma/adapter-mssql": "^7.8.0",
@@ -17,6 +19,7 @@
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
     "tsx": "^4.21.0",
     "zod": "^4.4.3"
   },

@@ -1,4 +1,3 @@
-import 'server-only'
 import { prisma } from '@/lib/db'
 
 export type DashboardStats = {
@@ -57,3 +56,5 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     })),
   }
 }
+
+export const getDashboardSummary = getDashboardStats

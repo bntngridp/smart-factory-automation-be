@@ -1,6 +1,11 @@
-import 'server-only'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db'
+
+function safeRevalidate(path: string) {
+  try {
+    revalidatePath(path)
+  } catch {}
+}
 
 export type CreateProductionLogInput = {
   ProductID: number
@@ -21,7 +26,7 @@ export async function createProductionLog(data: CreateProductionLogInput) {
     throw new Error('Produk harus dipilih')
   }
   if (!data.Quantity || data.Quantity <= 0) {
-    throw new Error('Quantity harus lebih dari 0')
+    throw new Error('Jumlah produksi harus lebih besar dari 0')
   }
   if (!data.OperatorName || data.OperatorName.trim() === '') {
     throw new Error('Nama operator tidak boleh kosong')
@@ -54,8 +59,8 @@ export async function createProductionLog(data: CreateProductionLogInput) {
     return log
   })
 
-  revalidatePath('/production-logs')
-  revalidatePath('/')
-  revalidatePath('/products')
+  safeRevalidate('/production-logs')
+  safeRevalidate('/')
+  safeRevalidate('/products')
   return result
 }
