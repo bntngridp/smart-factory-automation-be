@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "tsx --test tests/unit/*/*.spec.ts",
-    "test:integration": "tsx --test --test-concurrency=1 tests/integration/*/*.spec.ts"
+    "test:integration": "tsx --test --test-concurrency=1 tests/integration/*/*.spec.ts",
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-mssql": "^7.8.0",
