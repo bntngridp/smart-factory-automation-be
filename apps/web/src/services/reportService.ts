@@ -18,25 +18,27 @@ export async function getReportsAnalytics() {
     }),
   ])
 
-  // 1. Group Monthly Production Yield
-  const monthMap: Record<string, number> = {}
-  productionLogs.forEach((log) => {
-    if (!log.ProductionDate) return
-    const month = new Date(log.ProductionDate).toLocaleString('en-US', { month: 'short' })
-    monthMap[month] = (monthMap[month] || 0) + log.Quantity
-  })
+  // 1. Group Monthly Production Yield (Last 6 Months)
+  const now = new Date()
+  const monthlyYield = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthKey = d.toLocaleString('en-US', { month: 'short' })
+    const yearMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 
-  const monthlyYield = Object.keys(monthMap).map((month) => ({
-    month,
-    output: monthMap[month],
-    target: Math.round(monthMap[month] * 1.15),
-  }))
+    const monthTotal = productionLogs
+      .filter((log) => {
+        if (!log.ProductionDate) return false
+        const logDate = new Date(log.ProductionDate)
+        const logYM = `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, '0')}`
+        return logYM === yearMonthStr
+      })
+      .reduce((sum, log) => sum + log.Quantity, 0)
 
-  // Default months fallback if empty
-  if (monthlyYield.length === 0) {
-    const defaultMonths = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
-    defaultMonths.forEach((m) => {
-      monthlyYield.push({ month: m, output: 1200, target: 1500 })
+    monthlyYield.push({
+      month: monthKey,
+      output: monthTotal,
+      target: monthTotal > 0 ? Math.round(monthTotal * 1.2) : 500,
     })
   }
 
