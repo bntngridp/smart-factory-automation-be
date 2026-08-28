@@ -1,7 +1,8 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { loginUser, changeUserPassword } from '../../../src/services/authService'
+import { loginUser, changeUserPassword, resetPasswordWithTOTP } from '../../../src/services/authService'
 import { hashPassword, comparePassword } from '../../../src/lib/auth'
+import { generateSecret, generateTOTP } from '../../../src/lib/totp'
 import { testPrisma } from '../../helpers/testHelper'
 
 describe('Unit: AuthService (tests/unit/auth/auth.service.spec.ts)', () => {
@@ -95,6 +96,85 @@ describe('Unit: AuthService (tests/unit/auth/auth.service.spec.ts)', () => {
       await assert.rejects(
         async () => changeUserPassword(testUserId, 'newPassword456', '123'),
         /Kata sandi baru minimal 6 karakter/
+      )
+    })
+  })
+
+  describe('resetPasswordWithTOTP', () => {
+    let totpUser: string
+    let totpSecret: string
+
+    before(async () => {
+      totpUser = `totp_reset_${Date.now()}`
+      totpSecret = generateSecret()
+      const hashed = await hashPassword('initialPass123')
+      await testPrisma.users.create({
+        data: {
+          Username: totpUser,
+          Password: hashed,
+          Role: 'operator',
+          TwoFactorEnabled: true,
+          TwoFactorSecret: totpSecret,
+          TwoFactorRecovery: JSON.stringify(['RC-1111-2222', 'RC-3333-4444']),
+        },
+      })
+    })
+
+    after(async () => {
+      await testPrisma.users.deleteMany({ where: { Username: totpUser } })
+    })
+
+    it('🔴 [resetPasswordWithTOTP]: should successfully reset password using valid Microsoft Authenticator TOTP code', async () => {
+      const validCode = generateTOTP(totpSecret)
+      const res = await resetPasswordWithTOTP({
+        identifier: `${totpUser}@forge.inc`,
+        token: validCode,
+        newPassword: 'brandNewPassword999',
+      })
+
+      assert.equal(res.success, true)
+      const loggedIn = await loginUser(totpUser, 'brandNewPassword999')
+      assert.ok(loggedIn)
+    })
+
+    it('🔴 [resetPasswordWithTOTP]: should successfully reset password using a valid Recovery Code and consume it', async () => {
+      const res = await resetPasswordWithTOTP({
+        identifier: totpUser,
+        token: 'RC-1111-2222',
+        newPassword: 'recoveryPassword777',
+      })
+
+      assert.equal(res.success, true)
+      const loggedIn = await loginUser(totpUser, 'recoveryPassword777')
+      assert.ok(loggedIn)
+
+      // Verify code was consumed
+      const dbUser = await testPrisma.users.findUnique({ where: { Username: totpUser } })
+      const remainingCodes = JSON.parse(dbUser?.TwoFactorRecovery || '[]')
+      assert.equal(remainingCodes.includes('RC-1111-2222'), false)
+    })
+
+    it('🔴 [resetPasswordWithTOTP - Negative]: should reject invalid TOTP code', async () => {
+      await assert.rejects(
+        async () =>
+          resetPasswordWithTOTP({
+            identifier: totpUser,
+            token: '999999',
+            newPassword: 'validPassword123',
+          }),
+        /tidak valid/
+      )
+    })
+
+    it('🔴 [resetPasswordWithTOTP - Negative]: should reject non-existent user', async () => {
+      await assert.rejects(
+        async () =>
+          resetPasswordWithTOTP({
+            identifier: 'ghost_user_does_not_exist',
+            token: '123456',
+            newPassword: 'validPassword123',
+          }),
+        /tidak ditemukan/
       )
     })
   })

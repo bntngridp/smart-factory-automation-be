@@ -44,4 +44,38 @@ describe('Integration: Authentication Workflow (tests/integration/auth/auth.inte
     const res = await requestApi('/api/auth/me')
     assert.equal(res.status, 401)
   })
+
+  it('🔴 Flow: POST /api/auth/reset-password -> Reset password via Microsoft Authenticator / OTP -> Login with new password', async () => {
+    const resetRes = await requestApi('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier: 'adminsatu@forge.inc',
+        token: 'FACTORY-RESET-2026',
+        newPassword: 'newAdminPassword2026',
+      }),
+    })
+
+    assert.equal(resetRes.status, 200)
+    assert.equal(resetRes.body.success, true)
+
+    // Verify login with new password
+    const loginNew = await requestApi('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: 'adminsatu',
+        password: 'newAdminPassword2026',
+      }),
+    })
+    assert.equal(loginNew.status, 200)
+
+    // Revert password back to password123 for test reproducibility
+    await requestApi('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier: 'adminsatu',
+        token: 'FACTORY-RESET-2026',
+        newPassword: 'password123',
+      }),
+    })
+  })
 })
