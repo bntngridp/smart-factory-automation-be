@@ -78,4 +78,42 @@ describe('Integration: Authentication Workflow (tests/integration/auth/auth.inte
       }),
     })
   })
+
+  it('🔴 Flow: 2-Step Reset Wizard: POST /api/auth/reset-password/verify-otp -> POST /api/auth/reset-password (resetToken)', async () => {
+    // 1. Step 1: Verify OTP and receive resetToken
+    const step1Res = await requestApi('/api/auth/reset-password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier: 'adminsatu@forge.inc',
+        token: 'FACTORY-RESET-2026',
+      }),
+    })
+
+    assert.equal(step1Res.status, 200)
+    assert.equal(step1Res.body.valid, true)
+    assert.ok(step1Res.body.resetToken)
+    assert.equal(step1Res.body.username, 'adminsatu')
+
+    // 2. Step 2: Use resetToken to complete password reset
+    const step2Res = await requestApi('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        resetToken: step1Res.body.resetToken,
+        newPassword: 'wizardPassword123',
+      }),
+    })
+
+    assert.equal(step2Res.status, 200)
+    assert.equal(step2Res.body.success, true)
+
+    // Revert back
+    await requestApi('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier: 'adminsatu',
+        token: 'FACTORY-RESET-2026',
+        newPassword: 'password123',
+      }),
+    })
+  })
 })

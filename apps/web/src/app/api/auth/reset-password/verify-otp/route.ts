@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resetPasswordWithTOTP } from '@/services/authService'
+import { verifyResetPasswordOTP } from '@/services/authService'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'http://localhost:6061',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Credentials': 'true',
 }
@@ -15,32 +15,19 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { identifier, token, resetToken, newPassword } = body
+    const { identifier, token } = body
 
-    if (!newPassword) {
+    if (!identifier || !token) {
       return NextResponse.json(
-        { error: 'Kata sandi baru harus diisi' },
+        { error: 'Email kerja / username dan kode OTP / Recovery Code harus diisi' },
         { status: 400, headers: corsHeaders }
       )
     }
 
-    if (!resetToken && (!identifier || !token)) {
-      return NextResponse.json(
-        { error: 'Token verifikasi atau kredensial OTP harus disediakan' },
-        { status: 400, headers: corsHeaders }
-      )
-    }
-
-    const result = await resetPasswordWithTOTP({
-      identifier,
-      token,
-      resetToken,
-      newPassword,
-    })
-
+    const result = await verifyResetPasswordOTP(identifier, token)
     return NextResponse.json(result, { headers: corsHeaders })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Gagal mereset kata sandi'
+    const message = error instanceof Error ? error.message : 'Verifikasi OTP gagal'
     return NextResponse.json({ error: message }, { status: 400, headers: corsHeaders })
   }
 }

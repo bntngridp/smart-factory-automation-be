@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { loginUser, changeUserPassword, resetPasswordWithTOTP } from '../../../src/services/authService'
+import { loginUser, changeUserPassword, resetPasswordWithTOTP, verifyResetPasswordOTP } from '../../../src/services/authService'
 import { hashPassword, comparePassword } from '../../../src/lib/auth'
 import { generateSecret, generateTOTP } from '../../../src/lib/totp'
 import { testPrisma } from '../../helpers/testHelper'
@@ -176,6 +176,26 @@ describe('Unit: AuthService (tests/unit/auth/auth.service.spec.ts)', () => {
           }),
         /tidak ditemukan/
       )
+    })
+
+    it('🔴 [2-Step Reset Workflow]: Step 1 (verifyResetPasswordOTP) -> Step 2 (resetPasswordWithTOTP via resetToken)', async () => {
+      const validCode = generateTOTP(totpSecret)
+      // Step 1: Verify OTP and get temporary resetToken
+      const step1 = await verifyResetPasswordOTP(totpUser, validCode)
+      assert.equal(step1.valid, true)
+      assert.ok(step1.resetToken)
+      assert.equal(step1.username, totpUser)
+
+      // Step 2: Use resetToken to set new password
+      const step2 = await resetPasswordWithTOTP({
+        resetToken: step1.resetToken,
+        newPassword: 'twoStepPassword888',
+      })
+      assert.equal(step2.success, true)
+
+      // Verify login with new password
+      const loggedIn = await loginUser(totpUser, 'twoStepPassword888')
+      assert.ok(loggedIn)
     })
   })
 })
